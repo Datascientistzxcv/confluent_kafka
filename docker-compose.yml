@@ -39,7 +39,8 @@ services:
       CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
       CONFLUENT_METRICS_ENABLE: 'true'
       CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
-
+    networks:
+      - spark-kafka-network
   schema-registry:
     image: confluentinc/cp-schema-registry:6.2.1
     hostname: schema-registry
@@ -52,7 +53,8 @@ services:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-
+    networks:
+      - spark-kafka-network
   connect:
     image: cnfldemos/cp-server-connect-datagen:0.5.0-6.2.1
     hostname: connect
@@ -83,9 +85,8 @@ services:
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
       CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
       CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
-    volumes:
-            #            - /root/.Data/confluent/connectors/mongodb-kafka-connect-mongodb-1.6.1:/usr/share/confluent-hub-components/mongodb-kafka-connect-mongodb-1.6.1
-            - /root/.Data/confluent/connectors/:/usr/share/confluent-hub-components/
+    networks:
+      - spark-kafka-network
   control-center:
     image: confluentinc/cp-enterprise-control-center:6.2.1
     hostname: control-center
@@ -108,6 +109,8 @@ services:
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021
+    networks:
+      - spark-kafka-network
 
   ksqldb-server:
     image: confluentinc/cp-ksqldb-server:6.2.1
@@ -131,7 +134,8 @@ services:
       KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
       KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: 'true'
       KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: 'true'
-
+    networks:
+      - spark-kafka-network
   ksqldb-cli:
     image: confluentinc/cp-ksqldb-cli:6.2.1
     container_name: ksqldb-cli
@@ -141,6 +145,8 @@ services:
       - ksqldb-server
     entrypoint: /bin/sh
     tty: true
+    networks:
+      - spark-kafka-network
 
   ksql-datagen:
     image: confluentinc/ksqldb-examples:6.2.1
@@ -163,7 +169,8 @@ services:
       STREAMS_BOOTSTRAP_SERVERS: broker:29092
       STREAMS_SCHEMA_REGISTRY_HOST: schema-registry
       STREAMS_SCHEMA_REGISTRY_PORT: 8081
-
+    networks:
+      - spark-kafka-network
   rest-proxy:
     image: confluentinc/cp-kafka-rest:6.2.1
     depends_on:
@@ -178,3 +185,18 @@ services:
       KAFKA_REST_BOOTSTRAP_SERVERS: 'broker:29092'
       KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
       KAFKA_REST_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
+    networks:
+      - spark-kafka-network
+
+  spark:
+    build:
+      context: ./docker/
+    ports:
+      - "4040:4040"
+    networks:
+      - spark-kafka-network
+    depends_on:
+      - broker
+networks:
+  spark-kafka-network:
+    driver: bridge
